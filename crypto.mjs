@@ -67,15 +67,30 @@ export async function deriveKey(password, salt) {
 
 /**
  * 加密一个 JSON 对象。
+ *
+ * compress=true（默认）时先 gzip 再加密。这一步很关键：
+ * **加密后的数据无法再被压缩**（熵已经拉满），所以如果直接加密 993 KB 的明文，
+ * 产出就是约 1 MB 的密文，每次打开网站都要下这么多。先压到 280 KB 再加密，
+ * 最终约 380 KB —— 手机流量下差别很大。
+ *
+ * 解压靠浏览器的 DecompressionStream（Chrome 80+ / Safari 16.4+ / Firefox 113+）。
+ *
  * 返回可直接写进文件的紧凑结构。
  */
-export async function encryptJSON(obj, password) {
+export async function encryptJSON(obj, password, { compress = true } = {}) {
   const salt = crypto.getRandomValues(new Uint8Array(SALT_LEN));
   const iv = crypto.getRandomValues(new Uint8Array(IV_LEN));
   const key = await deriveKey(password, salt);
-  const plain = enc.encode(JSON.stringify(obj));
-  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: ALGO, iv }, key, plain));
-  return {
+
+  let payload = enc.encode(JSON.stringify(obj));
+  let zip = null;
+  if (compress) {
+    payload = await gzipBytes(payload);
+    zip = 'gzip';
+  }
+
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: ALGO, iv }, key, payload));
+  const out = {
     v: 1,
     alg: 'AES-256-GCM',
     kdf: `PBKDF2-SHA256/${ITER}`,
@@ -83,6 +98,27 @@ export async function encryptJSON(obj, password) {
     iv: toB64(iv),
     ct: toB64(ct),
   };
+  if (zip) out.zip = zip;
+  return out;
+}
+
+/** gzip 压缩（Node 与浏览器都有 CompressionStream） */
+export async function gzipBytes(bytes) {
+  if (typeof CompressionStream === 'undefined') {
+    throw new Error('当前环境不支持 CompressionStream');
+  }
+  const stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream('gzip'));
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+
+/** gzip 解压 */
+export async function gunzipBytes(bytes) {
+  if (typeof DecompressionStream === 'undefined') {
+    // 这个提示要具体，别让用户对着"密码不对"猜半天
+    throw new Error('浏览器太旧，不支持解压（需 iOS 16.4+ / Chrome 80+），请更新浏览器');
+  }
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+  return new Uint8Array(await new Response(stream).arrayBuffer());
 }
 
 /**
@@ -97,12 +133,23 @@ export async function decryptJSON(bundle, password) {
   const iv = fromB64(bundle.iv);
   const ct = fromB64(bundle.ct);
   const key = await deriveKey(password, salt);
+
   let plain;
   try {
-    plain = await crypto.subtle.decrypt({ name: ALGO, iv }, key, ct);
+    plain = new Uint8Array(await crypto.subtle.decrypt({ name: ALGO, iv }, key, ct));
   } catch {
     // 不要把底层错误抛出去（可能是 "operation failed" 之类），统一成一句
     throw new Error('密码不对');
   }
+
+  // 解压失败（比如浏览器太旧）要跟"密码错"区分开，否则用户会一直重输密码
+  if (bundle.zip === 'gzip') {
+    try {
+      plain = await gunzipBytes(plain);
+    } catch (e) {
+      throw new Error(e.message || '解压失败');
+    }
+  }
+
   return JSON.parse(dec.decode(plain));
 }

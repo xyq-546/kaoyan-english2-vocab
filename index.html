@@ -234,9 +234,13 @@ ambiguous
     <div class="gate-lock">🔒</div>
     <h2>需要密码</h2>
     <p class="tiny muted">私人词汇工具。输入密码解锁词库。</p>
-    <input type="password" id="gate-pw" placeholder="密码" autocomplete="current-password"
-           enterkeyhint="go" spellcheck="false">
-    <button class="primary big block" id="gate-go" style="margin-top:10px">解锁</button>
+    <!-- 包一层 form 是必要的：密码框不在 form 里时，浏览器（含 iOS 钥匙串）
+         不会提供"保存密码"，而这个词库密码只存在你脑子里，忘了就得重新构建。 -->
+    <form id="gate-form" autocomplete="on">
+      <input type="password" id="gate-pw" name="password" placeholder="密码"
+             autocomplete="current-password" spellcheck="false">
+      <button type="submit" class="primary big block" id="gate-go" style="margin-top:10px">解锁</button>
+    </form>
     <label class="gate-remember">
       <input type="checkbox" id="gate-remember" checked>
       <span>在这台设备上记住</span>

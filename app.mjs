@@ -1079,9 +1079,12 @@ function bind() {
       route();
     }
   };
-  $('#gate-go')?.addEventListener('click', gateGo);
-  $('#gate-pw')?.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); gateGo(); }
+  // 只挂 form 的 submit：按钮是 type="submit"，点它和按回车都会走到这里。
+  // 如果另外再挂一个按钮 click 监听，一次点击会触发两遍解锁。
+  // preventDefault 不能省 —— 不拦的话表单会尝试跳转、把页面刷掉。
+  $('#gate-form')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    gateGo();
   });
 
   // --- 录入
