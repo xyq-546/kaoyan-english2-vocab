@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="theme-color" content="#f4f5f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#14161a" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="mobile-web-app-capable" content="yes">
+<title>考研英语二 · 词汇</title>
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📖</text></svg>">
+</head>
+<body>
+
+<header>
+  <h1 id="page-title">录入生词</h1>
+  <span class="sync" id="sync" data-state="ok">已同步</span>
+</header>
+
+<main>
+
+  <!-- ============================================ 录入 -->
+  <section id="view-add" class="view">
+    <div class="card">
+      <h2>把做完题后的生词粘进来 <span class="sub">一行一个，也可只粘一段文字</span></h2>
+      <textarea id="input" placeholder="例如：
+
+deteriorate
+substitute
+in terms of
+compensate
+ambiguous
+
+也可以直接把整段阅读原文粘进来，会自动挑出单词"></textarea>
+      <div class="row wrap small muted" style="margin:10px 2px 12px">
+        <span id="parse-hint">等待输入…</span>
+      </div>
+      <div class="btn-grid">
+        <button id="btn-preview" class="ghost">先看看认不认得</button>
+        <button id="btn-add" class="primary">加入生词本</button>
+      </div>
+      <details class="more">
+        <summary>选项</summary>
+        <div class="switch">
+          <label for="opt-split">自动拆出整段文字里的单词</label>
+          <input type="checkbox" id="opt-split" checked>
+        </div>
+        <div class="switch">
+          <label for="opt-dedupe">已在生词本里的自动跳过</label>
+          <input type="checkbox" id="opt-dedupe" checked>
+        </div>
+      </details>
+    </div>
+
+    <div class="card" id="preview-card" hidden>
+      <h2>比对结果 <span class="sub" id="preview-sum"></span></h2>
+      <div id="preview-body"></div>
+    </div>
+
+    <div class="card" id="recent-card">
+      <h2>最近录入 <span class="sub">点一下可删</span></h2>
+      <div id="recent-body"></div>
+    </div>
+  </section>
+
+  <!-- ============================================ 复习 -->
+  <section id="view-review" class="view" hidden>
+    <div class="card" id="review-start">
+      <h2>今日复习</h2>
+      <div class="stats" id="due-stats"></div>
+      <p class="small muted" id="due-note" style="margin:12px 0 0"></p>
+      <div class="btn-grid" style="margin-top:14px">
+        <button class="primary big" id="btn-start-review">开始复习</button>
+        <button class="ghost big" id="btn-start-all">全部过一遍</button>
+      </div>
+    </div>
+
+    <div class="card" id="review-card" hidden>
+      <div class="spread tiny muted">
+        <span id="rv-progress"></span>
+        <span id="rv-left"></span>
+      </div>
+      <div class="progress"><i id="rv-bar" style="width:0%"></i></div>
+
+      <div class="review-stage">
+        <div id="rv-badges" class="row wrap" style="justify-content:center;min-height:22px"></div>
+        <div class="review-word" id="rv-word"></div>
+        <div class="review-phon" id="rv-phon"></div>
+
+        <div id="rv-reveal-wrap">
+          <button class="primary big block" id="btn-reveal" style="margin-top:14px">显示释义</button>
+        </div>
+
+        <div class="review-answer" id="rv-answer" hidden>
+          <div class="meaning" id="rv-meaning"></div>
+          <div class="prov" id="rv-prov"></div>
+        </div>      </div>
+
+      <div class="grade-bar" id="rv-grades" hidden>
+        <button class="g1" data-g="1">不认识</button>
+        <button class="g2" data-g="2">模糊</button>
+        <button class="g3" data-g="3">认识</button>
+      </div>
+
+      <div class="row" style="margin-top:12px;justify-content:space-between">
+        <button class="iconbtn" id="btn-rv-skip">跳过</button>
+        <button class="iconbtn" id="btn-rv-quit">结束本轮</button>
+      </div>
+    </div>
+
+    <div class="card" id="review-done" hidden>
+      <div class="empty">
+        <div class="big-emoji" id="done-emoji">✅</div>
+        <div id="done-text">本轮完成</div>
+      </div>
+      <div id="done-summary"></div>
+      <button class="primary big block" id="btn-done-back" style="margin-top:14px">回到概览</button>
+    </div>
+  </section>
+
+  <!-- ============================================ 生词本 -->
+  <section id="view-words" class="view" hidden>
+    <div class="card">
+      <div class="seg" id="filter-tier"></div>
+      <input type="text" id="search" placeholder="搜索单词…" style="margin-top:10px" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <div class="seg" id="filter-state" style="margin-top:8px"></div>
+      <div class="spread small muted" style="margin-top:10px">
+        <span id="list-count"></span>
+        <span class="row" style="gap:6px">
+          <button class="iconbtn" id="btn-export">导出</button>
+          <button class="iconbtn danger" id="btn-clear-done">清理已掌握</button>
+        </span>
+      </div>
+    </div>
+    <div class="card" style="padding:4px 14px">
+      <div class="wordlist" id="word-list"></div>
+    </div>
+  </section>
+
+  <!-- ============================================ 我的 -->
+  <section id="view-me" class="view" hidden>
+    <div class="card">
+      <h2>学习概况</h2>
+      <div class="stats" id="me-stats"></div>
+      <div style="margin-top:14px">
+        <div class="tiny muted">词汇等级构成（核心词占比越高，说明你抓的词越准）</div>
+        <div class="bar" id="me-bar"></div>
+        <div class="legend" id="me-legend"></div>
+      </div>
+      <div style="margin-top:16px">
+        <div class="tiny muted">未来 7 天复习量预估</div>
+        <div class="bar-row" id="me-forecast" style="margin-top:6px"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>设置</h2>
+      <label class="field">
+        <span>考试日期（用来算倒计时和每日配额）</span>
+        <input type="date" id="set-exam">
+      </label>
+      <label class="field">
+        <span>每日复习上限，0 = 不限</span>
+        <input type="number" id="set-limit" min="0" max="500" step="5">
+      </label>
+      <div class="switch">
+        <label for="set-show">复习时先显示释义选项</label>
+        <input type="checkbox" id="set-show">
+      </div>
+      <button class="primary block" id="btn-save-set" style="margin-top:14px">保存设置</button>
+    </div>
+
+    <div class="card">
+      <h2>手机访问</h2>
+      <div id="lan-body" class="small muted"></div>
+      <div class="qr-wrap" id="qr-wrap" hidden>
+        <canvas id="qr" width="168" height="168"></canvas>
+        <div class="tiny muted" style="margin-top:6px">手机扫码打开（需连同一个 WiFi）</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>词库</h2>
+      <div id="vocab-body" class="small muted"></div>
+      <details class="more">
+        <summary>等级是怎么定的</summary>
+        <div class="small muted" id="tier-explain" style="margin-top:6px"></div>
+      </details>
+    </div>
+
+    <div class="card">
+      <h2>数据</h2>
+      <div class="btn-grid">
+        <button id="btn-backup">导出备份 JSON</button>
+        <button id="btn-import">导入备份</button>
+      </div>
+      <input type="file" id="file-import" accept=".json,application/json" hidden>
+      <p class="tiny muted" style="margin:10px 2px 0">
+        记录存在运行服务的这台电脑上（data/records.json）。手机只是显示器，换手机不用重录，
+        但电脑上的数据别删。
+      </p>
+    </div>
+  </section>
+
+</main>
+
+<nav>
+  <a href="#add" data-view="add">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+    录入
+  </a>
+  <a href="#review" data-view="review">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+    复习<span class="pill" id="nav-due" hidden>0</span>
+  </a>
+  <a href="#words" data-view="words">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+    生词本
+  </a>
+  <a href="#me" data-view="me">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    我的
+  </a>
+</nav>
+
+<!-- 词库解锁遮罩。
+     线上版的词库是加密的（原因见 README：GitHub 免费账号做不出私有站点），
+     没有密码的人打开只会看到这个框，拿不到任何词条。
+     本机版（有 server.mjs）走的是后端接口，不会碰到这里。 -->
+<div class="gate" id="gate" hidden>
+  <div class="gate-card">
+    <div class="gate-lock">🔒</div>
+    <h2>需要密码</h2>
+    <p class="tiny muted">私人词汇工具。输入密码解锁词库。</p>
+    <input type="password" id="gate-pw" placeholder="密码" autocomplete="current-password"
+           enterkeyhint="go" spellcheck="false">
+    <button class="primary big block" id="gate-go" style="margin-top:10px">解锁</button>
+    <label class="gate-remember">
+      <input type="checkbox" id="gate-remember" checked>
+      <span>在这台设备上记住</span>
+    </label>
+    <div class="gate-msg" id="gate-msg"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module" src="app.mjs"></script>
+</body>
+</html>

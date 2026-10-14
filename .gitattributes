@@ -1,0 +1,14 @@
+# 网页文件一律用 LF 存储和检出。
+# 不加这个，Windows 上 git 的 autocrlf 会把 HTML/JS/CSS 转成 CRLF，
+# 虽然浏览器一般能容忍，但 diff 会满屏"整文件改动"，也容易出怪问题。
+* text=auto eol=lf
+
+# 二进制文件不做行尾转换
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+
+# 词库是构建产物，不参与 diff 统计（避免 PR 里出现几百 KB 的噪音）
+vocab.json -diff linguist-generated
